@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Seu Ponto - Sistema de Marcação, Compensação & Auditoria</title>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+
+  <!-- ==================== CABEÇALHO SUPERIOR ==================== -->
+  <header class="app-header">
+    <div class="header-inner">
+      <div class="brand">
+        <div class="brand-icon">⏱️</div>
+        <div class="brand-text">
+          <h1>Seu Ponto</h1>
+          <p>Controle de Jornada, Compensação de Sextas & Provas de Trabalho</p>
+        </div>
+      </div>
+
+      <div class="header-Telemetry">
+        <div id="badge-ip-status" class="pill-badge" title="Status da conexão e endereço IP de saída">
+          <span class="dot pulse"></span> Consultando IP...
+        </div>
+        <div id="badge-vpn-status" class="pill-badge" title="Indicador de conexão corporativa / VPN">
+          <span class="dot"></span> VPN
+        </div>
+        <div id="badge-sqlite-status" class="pill-badge primary" title="Banco de dados SQLite local no navegador/disco">
+          <span class="dot"></span> SQLite Ativo
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ==================== BARRA DE ABAS ==================== -->
+  <nav class="nav-bar no-print">
+    <div class="nav-inner">
+      <button class="nav-tab active" data-tab="hoje">
+        <span>⏱️</span> Hoje & Bater Ponto
+      </button>
+      <button class="nav-tab" data-tab="diario">
+        <span>📅</span> Resumo Diário
+      </button>
+      <button class="nav-tab" data-tab="semanal">
+        <span>📊</span> Semanal & Sexta 12h
+      </button>
+      <button class="nav-tab" data-tab="mensal">
+        <span>🗓️</span> Mensal & Banco
+      </button>
+      <button class="nav-tab" data-tab="evidencias">
+        <span>🛡️</span> Comprovantes & Prints
+      </button>
+      <button class="nav-tab" data-tab="config">
+        <span>⚙️</span> SQLite & Configurações
+      </button>
+    </div>
+  </nav>
+
+  <!-- ==================== CONTEÚDO PRINCIPAL ==================== -->
+  <main class="main-container">
+
+    <!-- KPI STRIP (SEMPRE VISÍVEL) -->
+    <section class="kpi-grid">
+      <div class="kpi-card" id="kpi-card-banco">
+        <div class="kpi-label">
+          <span>Saldo Geral Acumulado</span>
+          <span>💼</span>
+        </div>
+        <div class="kpi-value" id="kpi-saldo-banco">00h 00m</div>
+        <div class="kpi-sub" id="kpi-saldo-banco-sub">Calculando saldo do banco de horas...</div>
+      </div>
+
+      <div class="kpi-card kpi-friday">
+        <div class="kpi-label">
+          <span>Sextas Livres Disponíveis</span>
+          <span>🏖️</span>
+        </div>
+        <div class="kpi-value" id="kpi-sextas-livres">0 sextas</div>
+        <div class="kpi-sub" id="kpi-sextas-livres-sub">Acumule +4h no banco para liberar 1 sexta</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-label">
+          <span>Semana Atual</span>
+          <span>🎯</span>
+        </div>
+        <div class="kpi-value" id="kpi-semana-trabalhado">00h 00m / 40h</div>
+        <div class="kpi-sub" id="kpi-semana-sub">Acompanhamento da semana</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-label">
+          <span>Meta Sexta 12h (Seg-Qui)</span>
+          <span>🚀</span>
+        </div>
+        <div class="kpi-value" id="kpi-sexta-12h-status">0% (00h/36h)</div>
+        <div class="kpi-sub" id="kpi-sexta-12h-sub">9h/dia de Seg a Qui para sair 12h na Sexta</div>
+      </div>
+    </section>
+
+    <!-- ==================== ABA 1: HOJE & BATER PONTO ==================== -->
+    <section id="tab-hoje" class="tab-section active">
+      <div class="grid-2col">
+
+        <!-- COLUNA ESQUERDA: RELÓGIO, BOTÕES E REGISTROS DO DIA -->
+        <div>
+          <!-- RELÓGIO VIVO -->
+          <div class="live-clock-box">
+            <div id="live-clock-date" class="live-date-str">Carregando data...</div>
+            <div id="live-clock-time" class="live-time-str">00:00:00</div>
+            <div id="live-shift-status">
+              <span class="pill-badge">Aguardando marcação</span>
+            </div>
+
+            <!-- BARRA DE PROGRESSO DO DIA -->
+            <div class="progress-wrap" style="margin-top:16px;">
+              <div id="live-progress-bar-today" class="progress-bar" style="width:0%"></div>
+            </div>
+            <div id="live-predicted-exit" style="font-size:0.83rem; color:var(--text-secondary); margin-top:4px;">
+              Calculando estimativa de saída...
+            </div>
+
+            <!-- CONTADORES EM TEMPO REAL -->
+            <div class="live-timers-row">
+              <div class="timer-item">
+                <span>TRABALHADO HOJE</span>
+                <strong id="live-worked-today" style="color:var(--primary);">00h 00m 00s</strong>
+              </div>
+              <div class="timer-item">
+                <span>ALMOÇO / PAUSAS</span>
+                <strong id="live-lunch-today">00h 00m 00s</strong>
+              </div>
+              <div class="timer-item">
+                <span>SALDO DO DIA</span>
+                <strong id="live-balance-today">00h 00m 00s</strong>
+              </div>
+            </div>
+          </div>
+
+          <!-- BOTÕES DE BATER PONTO -->
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">⚡ Bater Ponto em Tempo Real</h3>
+              <button type="button" class="btn btn-sm" onclick="App.abrirModalAjuste()">
+                ✏️ Esqueci de bater / Ajustar Manual
+              </button>
+            </div>
+
+            <div class="punch-buttons-grid">
+              <button type="button" class="btn-punch entrada" data-punch-type="ENTRADA">
+                <div>
+                  <div>▶️ ENTRADA</div>
+                  <span class="sub">Início do expediente</span>
+                </div>
+                <span>⚡</span>
+              </button>
+
+              <button type="button" class="btn-punch almoco-ini" data-punch-type="ALMOCO_INICIO">
+                <div>
+                  <div>☕ SAÍDA P/ ALMOÇO</div>
+                  <span class="sub">Início do intervalo (1h)</span>
+                </div>
+                <span>🍴</span>
+              </button>
+
+              <button type="button" class="btn-punch almoco-fim" data-punch-type="ALMOCO_FIM">
+                <div>
+                  <div>🍽️ RETORNO ALMOÇO</div>
+                  <span class="sub">Volta do intervalo</span>
+                </div>
+                <span>💼</span>
+              </button>
+
+              <button type="button" class="btn-punch saida" data-punch-type="SAIDA">
+                <div>
+                  <div>⏹️ SAÍDA FINAL</div>
+                  <span class="sub">Encerramento da jornada</span>
+                </div>
+                <span>🏁</span>
+              </button>
+            </div>
+
+            <div class="form-group" style="margin-top:16px;">
+              <label for="input-live-activity">Atividade atual (opcional, compõe a evidência):</label>
+              <input type="text" id="input-live-activity" class="form-control" placeholder="Ex: Desenvolvimento, Atendimento a clientes, Reunião Teams..." />
+            </div>
+
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-top:12px; padding-top:12px; border-top:1px solid var(--border-color);">
+              <label style="display:flex; align-items:center; gap:8px; font-size:0.83rem; cursor:pointer;">
+                <input type="checkbox" id="chk-live-screenshot" checked />
+                <span>Capturar print da tela automaticamente ao bater o ponto</span>
+              </label>
+
+              <button type="button" id="btn-toggle-screen-stream" class="btn btn-primary btn-sm">
+                🖥️ Ativar Print Instantâneo (1-Clique sem popup repetido)
+              </button>
+            </div>
+          </div>
+
+          <!-- TELEMETRIA DE AMBIENTE -->
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">🛡️ Telemetria Forense & Ambiente</h3>
+              <button type="button" class="btn btn-sm" onclick="App.atualizarTelemetriaAmbiente(true)">
+                🔄 Atualizar IP/Rede
+              </button>
+            </div>
+            <div id="live-telemetry-details">
+              <div style="color:var(--text-secondary); font-size:0.83rem;">Coletando dados de rede e sistema...</div>
+            </div>
+          </div>
+
+          <!-- TABELA DE BATIDAS DE HOJE -->
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">📝 Batidas Registradas Hoje</h3>
+              <button type="button" class="btn btn-sm btn-primary" onclick="App.abrirModalAjuste(null, window.PontoCalculations.hojeStr())">
+                + Incluir Horário
+              </button>
+            </div>
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Hora</th>
+                    <th>Tipo</th>
+                    <th>Modo</th>
+                    <th>IP / Atividade</th>
+                    <th>Comprovante</th>
+                    <th>Ações</th>
+                  </tr>
+                </thead>
+                <tbody id="tbody-hoje-marcacoes">
+                  <!-- Inserido dinamicamente por App.renderizarAbaHoje -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- COLUNA DIREITA: PLANO SEXTA 12H E COMPENSAÇÃO -->
+        <div>
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">🚀 Plano da Sexta-Feira 12h</h3>
+            </div>
+            <div id="box-plano-sexta-hoje">
+              <!-- Inserido dinamicamente por App.renderizarAbaHoje -->
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">💡 Dicas de Compensação & Segurança</h3>
+            </div>
+            <div style="font-size:0.84rem; color:var(--text-secondary); line-height:1.6;">
+              <p style="margin-bottom:8px;">
+                <strong>Como funciona o seu acordo:</strong>
+              </p>
+              <ul style="padding-left:18px; margin-bottom:12px;">
+                <li>Trabalhando <strong>9h por dia de Segunda a Quinta</strong> (36h), sua jornada na <strong>Sexta é de apenas 4h</strong> (encerra às 12h).</li>
+                <li>Se precisarem de você na Sexta após as 12h, cada minuto extra vai como <strong>crédito no seu Banco de Horas</strong>.</li>
+                <li>Ao acumular <strong>4h extras</strong>, o sistema sinaliza que você já pode compensar e folgar <strong>1 sexta-feira inteira</strong>!</li>
+                <li>Os prints e carimbos de IP/SHA-256 geram o dossiê legal para comprovar cada hora realizada em caso de dúvidas.</li>
+              </ul>
+              <div style="background:var(--bg-input); padding:10px; border-radius:8px; border:1px solid var(--border-color); font-size:0.8rem;">
+                💾 <strong>Seus dados estão seguros:</strong> O banco SQLite é salvo no próprio navegador e você pode exportar o arquivo <code>.db</code> ou CSV a qualquer momento na aba Configurações.
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ==================== ABA 2: RESUMO DIÁRIO ==================== -->
+    <section id="tab-diario" class="tab-section">
+      <div class="card">
+        <div class="card-header">
+          <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+            <h3 class="card-title">📅 Espelho de Ponto Diário</h3>
+            <input type="date" id="filtro-data-diario" class="form-control" style="max-width:180px;" />
+            <select id="select-tipo-dia-diario" class="form-control" style="max-width:240px;">
+              <option value="NORMAL">Dia Normal de Trabalho</option>
+              <option value="FOLGA_COMPENSADA">Sexta Livre / Folga Compensada</option>
+              <option value="FERIADO">Feriado (Sem desconto)</option>
+              <option value="ATESTADO">Atestado Médico</option>
+              <option value="DISPENSA">Dispensa Autorizada</option>
+            </select>
+          </div>
+          <button type="button" class="btn btn-primary" onclick="App.abrirModalAjuste(null, App.dataFiltroDiario)">
+            + Lançar Ponto Neste Dia
+          </button>
+        </div>
+
+        <div id="diario-summary-cards">
+          <!-- Inserido dinamicamente por App.renderizarAbaDiario -->
+        </div>
+
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Hora</th>
+                <th>Tipo</th>
+                <th>Modo</th>
+                <th>Atividade</th>
+                <th>IP / Rede</th>
+                <th>Comprovante</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-diario-detalhe">
+              <!-- Inserido dinamicamente por App.renderizarAbaDiario -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== ABA 3: RESUMO SEMANAL ==================== -->
+    <section id="tab-semanal" class="tab-section">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h3 class="card-title">📊 Resumo Semanal & Auditoria de Sextas</h3>
+            <div id="semanal-periodo-label" style="font-size:0.84rem; color:var(--text-secondary); margin-top:2px;">
+              Carregando período da semana...
+            </div>
+          </div>
+          <div style="display:flex; align-items:center; gap:10px;">
+            <label for="filtro-data-semanal" style="font-size:0.84rem; color:var(--text-secondary);">Semana da data:</label>
+            <input type="date" id="filtro-data-semanal" class="form-control" style="max-width:180px;" />
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Dia da Semana</th>
+                <th>Status</th>
+                <th>Horários das Batidas</th>
+                <th>Trabalhado</th>
+                <th>Almoço</th>
+                <th>Meta</th>
+                <th>Saldo</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-semanal-dias">
+              <!-- Inserido dinamicamente por App.renderizarAbaSemanal -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- HISTÓRICO DE SEXTAS EXTRAS E COMPENSADAS -->
+      <div id="box-historico-sextas-compensacao">
+        <!-- Inserido dinamicamente por App.renderizarAbaSemanal -->
+      </div>
+    </section>
+
+    <!-- ==================== ABA 4: RESUMO MENSAL ==================== -->
+    <section id="tab-mensal" class="tab-section">
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">🗓️ Espelho Mensal & Banco de Horas Acumulado</h3>
+          <div style="display:flex; align-items:center; gap:10px;">
+            <label for="filtro-mes-mensal" style="font-size:0.84rem; color:var(--text-secondary);">Mês de Referência:</label>
+            <input type="month" id="filtro-mes-mensal" class="form-control" style="max-width:180px;" />
+            <button type="button" class="btn btn-sm btn-primary no-print" onclick="window.print()">
+              🖨️ Imprimir Espelho Mensal
+            </button>
+          </div>
+        </div>
+
+        <div id="mensal-summary-cards">
+          <!-- Inserido dinamicamente por App.renderizarAbaMensal -->
+        </div>
+
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Data</th>
+                <th>Situação</th>
+                <th>Batidas Realizadas</th>
+                <th>Trabalhado</th>
+                <th>Meta</th>
+                <th>Saldo</th>
+                <th>IP / Evidências</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-mensal-dias">
+              <!-- Inserido dinamicamente por App.renderizarAbaMensal -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== ABA 5: EVIDÊNCIAS & PRINTS ==================== -->
+    <section id="tab-evidencias" class="tab-section">
+      <div class="card" id="auditoria-chain-status">
+        <!-- Status da cadeia criptográfica inserido por App.renderizarAbaEvidencias -->
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">🛡️ Galeria de Comprovantes & Prints da Área de Trabalho</h3>
+          <span style="font-size:0.8rem; color:var(--text-secondary);">
+            Cada captura contém carimbo visual com IP, data/hora e assinatura SHA-256
+          </span>
+        </div>
+        <div id="galeria-evidencias-grid" class="evidence-grid">
+          <!-- Inserido dinamicamente por App.renderizarAbaEvidencias -->
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== ABA 6: CONFIGURAÇÕES & SQLITE ==================== -->
+    <section id="tab-config" class="tab-section">
+      <div class="grid-2col">
+
+        <!-- CONFIGURAÇÕES DE JORNADA -->
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">⚙️ Regras de Jornada & Compensação</h3>
+          </div>
+          <form id="form-configuracoes">
+            <div class="form-row">
+              <div class="form-group">
+                <label for="cfg-nome">Nome do Colaborador:</label>
+                <input type="text" id="cfg-nome" class="form-control" placeholder="Seu Nome Completo" />
+              </div>
+              <div class="form-group">
+                <label for="cfg-empresa">Empresa / Setor:</label>
+                <input type="text" id="cfg-empresa" class="form-control" placeholder="Nome da Empresa" />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="cfg-modo-jornada">Modelo de Compensação Semanal:</label>
+              <select id="cfg-modo-jornada" class="form-control">
+                <option value="SEXTA_12H">Compensação da Sexta 12h (9h Seg-Qui + 4h Sexta = 40h semanais)</option>
+                <option value="PADRAO_8H">Padrão CLT (8h Seg-Sex = 40h semanais)</option>
+              </select>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="cfg-meta-seg-qui">Meta Seg a Qui (horas/dia):</label>
+                <input type="number" step="0.5" id="cfg-meta-seg-qui" class="form-control" value="9" />
+              </div>
+              <div class="form-group">
+                <label for="cfg-meta-sexta">Meta Sexta-Feira (horas):</label>
+                <input type="number" step="0.5" id="cfg-meta-sexta" class="form-control" value="4" />
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="cfg-almoco-min">Pausa Almoço Padrão (minutos):</label>
+                <input type="number" id="cfg-almoco-min" class="form-control" value="60" />
+              </div>
+              <div class="form-group">
+                <label for="cfg-saldo-inicial">Saldo Inicial do Banco (minutos):</label>
+                <input type="number" id="cfg-saldo-inicial" class="form-control" value="0" title="Saldo positivo ou negativo anterior ao uso do sistema" />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="cfg-vpn-termos">Palavras-chave da VPN corporativa (separadas por vírgula):</label>
+              <input type="text" id="cfg-vpn-termos" class="form-control" placeholder="Ex: globalprotect, cisco, anyconnect, openvpn, corporate" />
+              <small style="color:var(--text-secondary); display:block; margin-top:4px;">
+                Ajuda o detector a reconhecer o túnel da VPN empresarial nas informações de rede.
+              </small>
+            </div>
+
+            <div style="margin-top:16px;">
+              <button type="submit" class="btn btn-success" style="width:100%;">
+                💾 Salvar Configurações
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- BANCO SQLITE & BACKUPS -->
+        <div>
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">🗄️ Estatísticas & Armazenamento SQLite</h3>
+            </div>
+            <div id="sqlite-stats-summary" style="margin-bottom:16px;">
+              <!-- Inserido dinamicamente por App.renderizarAbaConfigSQLite -->
+            </div>
+
+            <div style="display:flex; flex-direction:column; gap:10px;">
+              <button type="button" class="btn btn-primary" onclick="App.baixarArquivoSQLite()">
+                ⬇️ Baixar Banco de Dados Físico (.db / SQLite3)
+              </button>
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                <button type="button" class="btn" onclick="App.exportarCSV()">
+                  📊 Exportar Planilha CSV
+                </button>
+                <button type="button" class="btn" onclick="App.exportarJSON()">
+                  📦 Backup Completo JSON
+                </button>
+              </div>
+
+              <div style="margin-top:10px; padding-top:12px; border-top:1px solid var(--border-color);">
+                <label for="input-import-sqlite" style="display:block; font-size:0.82rem; font-weight:600; margin-bottom:6px;">
+                  Restaurar Banco de Dados (.db):
+                </label>
+                <input type="file" id="input-import-sqlite" class="form-control" accept=".db,.sqlite,.sqlite3" />
+              </div>
+            </div>
+          </div>
+
+          <!-- CONSOLE SQL DIRETO -->
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">🔍 Consulta SQL Direta no Banco</h3>
+            </div>
+            <div class="form-group">
+              <textarea id="textarea-sql-custom" class="form-control" rows="3" style="font-family:monospace; font-size:0.84rem;">SELECT id, data, hora, tipo, modo_registro, ip_publico, vpn_detectada FROM marcacoes ORDER BY id DESC LIMIT 5;</textarea>
+            </div>
+            <div style="display:flex; justify-content:flex-end; margin-bottom:10px;">
+              <button type="button" id="btn-executar-sql" class="btn btn-sm btn-primary">
+                ▶️ Executar Consulta
+              </button>
+            </div>
+            <pre id="sql-query-output" style="background:var(--bg-input); padding:12px; border-radius:6px; font-size:0.75rem; max-height:180px; overflow:auto; border:1px solid var(--border-color); color:#38bdf8;">Pronto para executar consultas SQL...</pre>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ==================== MODAL DE AJUSTE / PONTO MANUAL ==================== -->
+  <div id="modal-ajuste-ponto" class="modal-backdrop">
+    <div class="modal-content">
+      <div class="card-header" style="margin-bottom:14px;">
+        <h3 class="card-title" id="modal-ajuste-title">Lançar Ponto Esquecido / Ajuste Manual</h3>
+        <button type="button" class="btn btn-sm" onclick="App.fecharModalAjuste()">✕</button>
+      </div>
+
+      <form id="form-modal-ajuste">
+        <input type="hidden" id="ajuste-id" value="" />
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="ajuste-data">Data:</label>
+            <input type="date" id="ajuste-data" class="form-control" required />
+          </div>
+          <div class="form-group">
+            <label for="ajuste-hora">Horário (HH:MM):</label>
+            <input type="time" id="ajuste-hora" class="form-control" required />
+          </div>
+          <div class="form-group">
+            <label for="ajuste-tipo">Tipo de Batida:</label>
+            <select id="ajuste-tipo" class="form-control" required>
+              <option value="ENTRADA">Entrada (Início)</option>
+              <option value="ALMOCO_INICIO">Saída p/ Almoço</option>
+              <option value="ALMOCO_FIM">Retorno do Almoço</option>
+              <option value="SAIDA">Saída (Fim)</option>
+              <option value="PAUSA_INICIO">Início de Pausa Extra</option>
+              <option value="PAUSA_FIM">Fim de Pausa Extra</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="ajuste-atividade">Atividade que estava realizando:</label>
+          <input type="text" id="ajuste-atividade" class="form-control" placeholder="Ex: Reunião com diretoria, Desenvolvimento de feature..." />
+        </div>
+
+        <div class="form-group">
+          <label for="ajuste-justificativa">Justificativa do ajuste ou esquecimento:</label>
+          <input type="text" id="ajuste-justificativa" class="form-control" placeholder="Ex: Esqueci de marcar no horário exato por estar em reunião externa" required />
+        </div>
+
+        <!-- ANEXAR COMPROVANTE NO AJUSTE -->
+        <div class="form-group" style="background:var(--bg-input); padding:12px; border-radius:8px; border:1px solid var(--border-color);">
+          <label style="display:block; margin-bottom:8px;">Comprovante de Trabalho (Print da Tela):</label>
+          <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:10px;">
+            <button type="button" id="btn-modal-capturar-tela" class="btn btn-sm btn-primary">
+              📸 Capturar Tela Agora
+            </button>
+            <label class="btn btn-sm" style="cursor:pointer;">
+              📁 Selecionar Arquivo de Imagem
+              <input type="file" id="input-modal-file-print" accept="image/*" style="display:none;" />
+            </label>
+          </div>
+
+          <div id="ajuste-screenshot-preview" style="text-align:center; padding:8px;">
+            <span style="color:var(--text-secondary); font-size:0.8rem;">
+              Dica: Você também pode tirar print (<strong>Win + Shift + S</strong>) e dar <strong>Ctrl + V</strong> aqui para colar diretamente!
+            </span>
+          </div>
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:16px;">
+          <button type="button" class="btn" onclick="App.fecharModalAjuste()">Cancelar</button>
+          <button type="submit" class="btn btn-success">Salvar Marcação</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL DE VISUALIZAÇÃO DE EVIDÊNCIA ==================== -->
+  <div id="modal-evidencia-detalhe" class="modal-backdrop">
+    <div class="modal-content modal-lg">
+      <div class="card-header" style="margin-bottom:14px;">
+        <h3 class="card-title">🔍 Comprovante Forense de Trabalho & Assinatura SHA-256</h3>
+        <button type="button" class="btn btn-sm" onclick="document.getElementById('modal-evidencia-detalhe').classList.remove('open')">✕</button>
+      </div>
+      <div id="modal-evidencia-body">
+        <!-- Inserido dinamicamente por App.abrirModalEvidencia -->
+      </div>
+      <div style="display:flex; justify-content:flex-end; margin-top:16px;">
+        <button type="button" class="btn" onclick="document.getElementById('modal-evidencia-detalhe').classList.remove('open')">Fechar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== TOAST CONTAINER ==================== -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- ==================== SCRIPTS DA APLICAÇÃO ==================== -->
+  <!-- 1. SQLite WASM embutido (100% offline e sem necessidade de servidor externo) -->
+  <script src="vendor/sql-wasm-base64.js"></script>
+  <script src="vendor/sql-wasm.js"></script>
+
+  <!-- 2. Módulos do Sistema -->
+  <script src="js/evidence.js"></script>
+  <script src="js/calculations.js"></script>
+  <script src="js/db.js"></script>
+  <script src="js/app.js"></script>
+
+</body>
+</html>
